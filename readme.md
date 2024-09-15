@@ -1,7 +1,5 @@
 # YouTube Summarizer - Chrome Extension
 
-![YouTube Summarizer Icon](icon.png)
-
 ## Overview
 
 **YouTube Summarizer** is a Chrome extension designed to help users quickly understand the content of YouTube videos by generating concise summaries of their transcripts. This extension extracts the video transcript, processes it using the OpenAI API, and provides a brief, easy-to-read summary directly in the browser, saving users time and enhancing their browsing experience.

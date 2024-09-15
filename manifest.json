@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "YouTube Summarizer using OpenAI",
+    "version": "0.1",
+    "description": "Summarize YouTube videos using OpenAI API.",
+    "permissions": ["storage", "scripting", "activeTab"],
+    "host_permissions": ["*://*.youtube.com/*"],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "options_page": "options.html",
+    "background": {
+      "service_worker": "background.js"
+    }
+  }

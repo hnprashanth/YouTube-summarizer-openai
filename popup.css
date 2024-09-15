@@ -1,0 +1,61 @@
+/* Set the overall size of the popup */
+body {
+    width: 350px; /* Width of the popup */
+    height: 400px; /* Height of the popup */
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    margin: 0;
+    overflow: hidden;
+  }
+  
+  /* Container for the content */
+  .container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+  
+  /* Style for the header/title */
+  h1 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  
+  /* Style for the buttons */
+  button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 5px 0;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+  
+  /* Style for the summary box */
+  .summary-box {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    height: 250px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap; /* Preserve whitespace and line breaks */
+  }
+  
+  /* Style for the confirmation message */
+  .confirmation-message {
+    font-size: 12px;
+    color: #4CAF50;
+    margin-top: 5px;
+    display: none; /* Hidden by default */
+  }

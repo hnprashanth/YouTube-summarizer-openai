@@ -20,3 +20,6 @@ To install the YouTube Summarizer Chrome extension:
 
    ```bash
    git clone https://github.com/your-username/youtube-summarizer-extension.git
+
+## Credits
+Transcript extraction library - https://github.com/Kakulukian/youtube-transcript

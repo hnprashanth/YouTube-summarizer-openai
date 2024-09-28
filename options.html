@@ -7,6 +7,7 @@
   <h1>Settings</h1>
   
   <!-- API Key Input -->
+  <h2>API Key (required)</h2>
   <label for="apiKeyInput">Enter your OpenAI API Key</label>
   <input type="password" id="apiKeyInput" placeholder="sk-..." size="50"/>
   <button id="saveButton">Save</button>
@@ -21,14 +22,17 @@
   <button id="saveModelButton">Save Model</button>
 
   <!-- Custom Prompt Input -->
-  <h2>Custom Prompt</h2>
+  <h2>Custom Prompt (optional)</h2>
   <textarea id="customPrompt" placeholder="Enter a custom prompt..." rows="4" cols="50"></textarea>
   <button id="savePromptButton">Save Prompt</button>
+  <p>Sample Prompt: Given the transcript of a YouTube video, summarize the video in a concise and informative manner in bullet points.</p>
+  <p>Sample Prompt: Given the transcript of a YouTube video, summarize the video in detailed manner not losing any key takeaways.</p>
 
   <!-- Max Token Limit Input -->
-  <h2>Max Output Token Limit</h2>
+  <h2>Max Output Token Limit (optional)</h2>
   <input type="number" id="maxTokenLimit" min="1" max="4096" value="150"/>
   <button id="saveTokenLimitButton">Save Token Limit</button>
+  <p>More the token limit, more detailed summary, less token limit, less detailed summary. More tokens will also cost more.</p>
 
   <!-- Display stored API key and model -->
   <h2>Current API Key</h2>

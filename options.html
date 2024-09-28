@@ -1,13 +1,47 @@
-<!-- options.html -->
 <!DOCTYPE html>
 <html>
 <head>
-  <title>API Key Settings</title>
+  <title>API Key, Model, and Customization Settings</title>
 </head>
 <body>
-  <h1>Enter your OpenAI API Key</h1>
+  <h1>Settings</h1>
+  
+  <!-- API Key Input -->
+  <label for="apiKeyInput">Enter your OpenAI API Key</label>
   <input type="password" id="apiKeyInput" placeholder="sk-..." size="50"/>
   <button id="saveButton">Save</button>
+  <p id="status"></p>
+
+  <!-- Model Selection Dropdown -->
+  <h2>Select Model</h2>
+  <select id="modelSelection">
+    <option value="gpt-4o" selected>GPT-4o (default)</option>
+    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+  </select>
+  <button id="saveModelButton">Save Model</button>
+
+  <!-- Custom Prompt Input -->
+  <h2>Custom Prompt</h2>
+  <textarea id="customPrompt" placeholder="Enter a custom prompt..." rows="4" cols="50"></textarea>
+  <button id="savePromptButton">Save Prompt</button>
+
+  <!-- Max Token Limit Input -->
+  <h2>Max Output Token Limit</h2>
+  <input type="number" id="maxTokenLimit" min="1" max="4096" value="150"/>
+  <button id="saveTokenLimitButton">Save Token Limit</button>
+
+  <!-- Display stored API key and model -->
+  <h2>Current API Key</h2>
+  <p id="storedApiKey"></p>
+
+  <h2>Selected Model</h2>
+  <p id="storedModel"></p>
+
+  <h2>Current Prompt</h2>
+  <p id="storedPrompt"></p>
+
+  <h2>Current Token Limit</h2>
+  <p id="storedTokenLimit"></p>
 
   <script src="options.js"></script>
 </body>

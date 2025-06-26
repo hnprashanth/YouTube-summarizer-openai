@@ -1,142 +1,161 @@
 // popup.js
 
-document.getElementById("summarizeButton").addEventListener("click", () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+// Cache DOM elements
+const elements = {
+  summarizeButton: null,
+  copyButton: null,
+  summary: null,
+  copyConfirmation: null
+};
+
+// Initialize popup
+document.addEventListener('DOMContentLoaded', initializePopup);
+
+function initializePopup() {
+  try {
+    // Cache DOM elements
+    elements.summarizeButton = DOMUtils.getElement("summarizeButton");
+    elements.copyButton = DOMUtils.getElement("copyButton");
+    elements.summary = DOMUtils.getElement("summary");
+    elements.copyConfirmation = DOMUtils.getElement("copyConfirmation");
+
+    // Add event listeners
+    elements.summarizeButton.addEventListener("click", handleSummarizeClick);
+    elements.copyButton.addEventListener("click", handleCopyClick);
+  } catch (error) {
+    console.error('Failed to initialize popup:', error);
+  }
+}
+
+async function handleSummarizeClick() {
+  try {
+    elements.summarizeButton.disabled = true;
+    updateSummaryText("Processing...");
+
+    const tabs = await getActiveTab();
     const tab = tabs[0];
 
-    if (tab.url.includes("youtube.com/watch")) {
-      // Check if content script has already been injected
-      chrome.scripting.executeScript(
-        {
-          target: { tabId: tab.id },
-          func: () => window.contentScriptInjected, // Check if already injected
-        },
-        (results) => {
-          if (results[0].result) {
-            // Content script already injected
-            console.log("Content script already injected.");
-            sendGetTranscriptMessage(tab.id);
-          } else {
-            // Inject the YouTube Transcript library
-            chrome.scripting.executeScript(
-              {
-                target: { tabId: tab.id },
-                files: ['youtube-transcript.js'],
-              },
-              () => {
-                // Inject the content script
-                chrome.scripting.executeScript(
-                  {
-                    target: { tabId: tab.id },
-                    files: ['contentScript.js'],
-                  },
-                  () => {
-                    // Now send the message to the content script to get the transcript
-                    sendGetTranscriptMessage(tab.id);
-                  }
-                );
-              }
-            );
-          }
-        }
-      );
-    } else {
-      document.getElementById("summary").innerText = "Please navigate to a YouTube video page.";
-    }
-  });
-});
-
-// Function to send a message to the content script to get the transcript
-function sendGetTranscriptMessage(tabId) {
-  chrome.tabs.sendMessage(tabId, { action: "getTranscript" }, async (response) => {
-    if (chrome.runtime.lastError) {
-      console.error("Error sending message to content script:", chrome.runtime.lastError);
-      document.getElementById("summary").innerText = "Error: " + chrome.runtime.lastError.message;
-      return;
+    if (!isYouTubeVideoPage(tab.url)) {
+      throw new Error("Please navigate to a YouTube video page.");
     }
 
-    if (!response) {
-      console.error("No response received from content script.");
-      document.getElementById("summary").innerText = "Error: No response from content script.";
-      return;
-    }
-
-    console.log("Received response from content script:", response);
-
-    if (response.error) {
-      document.getElementById("summary").innerText = "Error: " + response.error;
-    } else {
-      const transcript = response.transcript;
-      document.getElementById("summary").innerText = "Transcript fetched. Generating summary...";
-
-      // Fetch the OpenAI API key, custom prompt, and token limit
-      chrome.storage.sync.get(["openaiApiKey", "customPrompt", "maxTokenLimit"], async (items) => {
-        const apiKey = items.openaiApiKey;
-        const prompt = items.customPrompt || "Summarize the following transcript of a YouTube Video:"; // Default prompt if not set
-        const maxTokens = items.maxTokenLimit || 500; // Default max tokens if not set
-
-        if (!apiKey) {
-          document.getElementById("summary").innerText = "Error: OpenAI API key not set.";
-          return;
-        }
-
-        try {
-          // Generate summary using OpenAI API with custom prompt and token limit
-          const summary = await generateSummary(transcript, apiKey, prompt, maxTokens);
-          document.getElementById("summary").innerText = summary;
-        } catch (error) {
-          console.error("Error summarizing transcript:", error);
-          document.getElementById("summary").innerText = "Error: " + error.message;
-        }
-      });
-    }
-  });
-}
-
-// Function to summarize the transcript using OpenAI API
-async function generateSummary(transcript, apiKey, prompt, maxTokens) {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o", // or "gpt-4" if you have access
-      messages: [{ role: "user", content: `${prompt}\n\n${transcript}` }],
-      max_tokens: maxTokens, // Use custom max token limit
-      temperature: 0.7,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error.message);
+    await ensureScriptsInjected(tab.id);
+    await processTranscriptAndSummarize(tab.id);
+  } catch (error) {
+    console.error('Summarize error:', error);
+    updateSummaryText(`Error: ${ErrorHandler.getErrorMessage(error)}`);
+  } finally {
+    elements.summarizeButton.disabled = false;
   }
-
-  const data = await response.json();
-  return data.choices[0].message.content.trim();
 }
 
-// Add copy to clipboard functionality
-document.getElementById("copyButton").addEventListener("click", () => {
-  const summaryText = document.getElementById("summary").innerText;
-  if (summaryText) {
-    navigator.clipboard.writeText(summaryText).then(() => {
-      // Display confirmation message
-      const confirmationMessage = document.getElementById("copyConfirmation");
-      confirmationMessage.innerText = "Summary copied to clipboard!";
-      confirmationMessage.style.display = "block"; // Show the confirmation message
+function getActiveTab() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, resolve);
+  });
+}
 
-      // Hide the message after a few seconds
-      setTimeout(() => {
-        confirmationMessage.style.display = "none";
-      }, 3000);
-    }).catch((err) => {
-      console.error("Failed to copy text: ", err);
-      document.getElementById("copyConfirmation").innerText = "Failed to copy summary to clipboard.";
+function isYouTubeVideoPage(url) {
+  return url && url.includes("youtube.com/watch");
+}
+
+async function ensureScriptsInjected(tabId) {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId },
+    func: () => window.contentScriptInjected
+  });
+
+  if (!results[0].result) {
+    await injectScripts(tabId);
+  }
+}
+
+async function injectScripts(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['api-utils.js']
+  });
+  
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['youtube-transcript.js']
+  });
+  
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ['contentScript.js']
+  });
+}
+
+async function processTranscriptAndSummarize(tabId) {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.sendMessage(tabId, { action: "getTranscript" }, async (response) => {
+      try {
+        if (chrome.runtime.lastError) {
+          throw new Error(chrome.runtime.lastError.message);
+        }
+
+        if (!response) {
+          throw new Error("No response from content script");
+        }
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        if (!response.transcript) {
+          throw new Error("No transcript received");
+        }
+
+        updateSummaryText("Transcript fetched. Generating summary...");
+        
+        const summary = await OpenAIClient.generateSummary(response.transcript);
+        updateSummaryText(summary);
+        resolve(summary);
+      } catch (error) {
+        reject(error);
+      }
     });
-  } else {
-    document.getElementById("copyConfirmation").innerText = "No summary available to copy.";
+  });
+}
+
+function updateSummaryText(text) {
+  if (elements.summary) {
+    elements.summary.innerText = text;
   }
-});
+}
+
+async function handleCopyClick() {
+  try {
+    const summaryText = elements.summary.innerText;
+    
+    if (!summaryText || summaryText.includes('Error:') || summaryText.includes('Processing')) {
+      throw new Error('No valid summary available to copy');
+    }
+
+    await navigator.clipboard.writeText(summaryText);
+    showCopyConfirmation('Summary copied to clipboard!', 'success');
+  } catch (error) {
+    console.error('Copy failed:', error);
+    showCopyConfirmation('Failed to copy summary', 'error');
+  }
+}
+
+function showCopyConfirmation(message, type) {
+  if (elements.copyConfirmation) {
+    elements.copyConfirmation.innerText = message;
+    elements.copyConfirmation.className = type;
+    elements.copyConfirmation.style.display = 'block';
+    
+    setTimeout(() => {
+      elements.copyConfirmation.style.display = 'none';
+    }, 3000);
+  }
+}
+
+// Load shared utilities
+if (typeof DOMUtils === 'undefined') {
+  const script = document.createElement('script');
+  script.src = 'api-utils.js';
+  document.head.appendChild(script);
+}

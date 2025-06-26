@@ -1,49 +1,100 @@
-// Save the API key
-document.getElementById("saveButton").addEventListener("click", () => {
-  const apiKey = document.getElementById("apiKeyInput").value.trim();
-  if (apiKey) {
+// Load shared utilities
+if (typeof ValidationUtils === 'undefined') {
+  const script = document.createElement('script');
+  script.src = 'api-utils.js';
+  document.head.appendChild(script);
+}
+
+// Initialize options page
+document.addEventListener('DOMContentLoaded', initializeOptions);
+
+function initializeOptions() {
+  setupEventListeners();
+  displayAllStoredValues();
+}
+
+function setupEventListeners() {
+  document.getElementById("saveButton").addEventListener("click", handleSaveApiKey);
+  document.getElementById("saveModelButton").addEventListener("click", handleSaveModel);
+  document.getElementById("savePromptButton").addEventListener("click", handleSavePrompt);
+  document.getElementById("saveTokenLimitButton").addEventListener("click", handleSaveTokenLimit);
+}
+
+// Save the API key with validation
+function handleSaveApiKey() {
+  try {
+    const apiKey = document.getElementById("apiKeyInput").value.trim();
+    ValidationUtils.validateApiKey(apiKey);
+    
     chrome.storage.sync.set({ openaiApiKey: apiKey }, () => {
-      document.getElementById("status").innerText = "API key saved.";
-      displayStoredApiKey(); // Refresh the displayed key after saving
+      showStatus("API key saved successfully.", "success");
+      displayStoredApiKey();
+      document.getElementById("apiKeyInput").value = '';
     });
+  } catch (error) {
+    showStatus(`Error: ${error.message}`, "error");
   }
-});
+}
 
 // Save the selected model
-document.getElementById("saveModelButton").addEventListener("click", () => {
-  const selectedModel = document.getElementById("modelSelection").value;
-  chrome.storage.sync.set({ selectedModel: selectedModel }, () => {
-    document.getElementById("status").innerText = "Model saved.";
-    displayStoredModel(); // Refresh the displayed model after saving
-  });
-});
-
-// Save the custom prompt
-document.getElementById("savePromptButton").addEventListener("click", () => {
-  const customPrompt = document.getElementById("customPrompt").value.trim();
-  chrome.storage.sync.set({ customPrompt: customPrompt }, () => {
-    document.getElementById("status").innerText = "Prompt saved.";
-    displayStoredPrompt(); // Refresh the displayed prompt after saving
-  });
-});
-
-// Save the max token limit
-document.getElementById("saveTokenLimitButton").addEventListener("click", () => {
-  const tokenLimit = parseInt(document.getElementById("maxTokenLimit").value);
-  if (tokenLimit > 0) {
-    chrome.storage.sync.set({ maxTokenLimit: tokenLimit }, () => {
-      document.getElementById("status").innerText = "Token limit saved.";
-      displayStoredTokenLimit(); // Refresh the displayed token limit after saving
+function handleSaveModel() {
+  try {
+    const selectedModel = document.getElementById("modelSelection").value;
+    if (!selectedModel) {
+      throw new Error("Please select a model");
+    }
+    
+    chrome.storage.sync.set({ selectedModel }, () => {
+      showStatus("Model saved successfully.", "success");
+      displayStoredModel();
     });
+  } catch (error) {
+    showStatus(`Error: ${error.message}`, "error");
   }
-});
+}
+
+// Save the custom prompt with validation
+function handleSavePrompt() {
+  try {
+    const customPrompt = document.getElementById("customPrompt").value.trim();
+    ValidationUtils.validatePrompt(customPrompt);
+    
+    chrome.storage.sync.set({ customPrompt }, () => {
+      showStatus("Prompt saved successfully.", "success");
+      displayStoredPrompt();
+    });
+  } catch (error) {
+    showStatus(`Error: ${error.message}`, "error");
+  }
+}
+
+// Save the max token limit with validation
+function handleSaveTokenLimit() {
+  try {
+    const tokenLimitInput = document.getElementById("maxTokenLimit").value;
+    const tokenLimit = ValidationUtils.validateTokenLimit(tokenLimitInput);
+    
+    chrome.storage.sync.set({ maxTokenLimit: tokenLimit }, () => {
+      showStatus("Token limit saved successfully.", "success");
+      displayStoredTokenLimit();
+    });
+  } catch (error) {
+    showStatus(`Error: ${error.message}`, "error");
+  }
+}
 
 // Function to fetch and display the stored API key
 function displayStoredApiKey() {
   chrome.storage.sync.get("openaiApiKey", (result) => {
-    const apiKey = result.openaiApiKey || "No API key stored.";
-    document.getElementById("storedApiKey").innerText = apiKey.replace(/.(?=.{4})/g, '*'); // Mask all but last 4 characters
+    const apiKey = result.openaiApiKey;
+    const displayText = apiKey ? maskApiKey(apiKey) : "No API key stored.";
+    document.getElementById("storedApiKey").innerText = displayText;
   });
+}
+
+function maskApiKey(apiKey) {
+  if (apiKey.length <= 8) return '*'.repeat(apiKey.length);
+  return apiKey.slice(0, 4) + '*'.repeat(apiKey.length - 8) + apiKey.slice(-4);
 }
 
 // Function to fetch and display the stored model
@@ -57,21 +108,34 @@ function displayStoredModel() {
 // Function to fetch and display the stored custom prompt
 function displayStoredPrompt() {
   chrome.storage.sync.get("customPrompt", (result) => {
-    const prompt = result.customPrompt || "Summarize the following text:";
-    document.getElementById("storedPrompt").innerText = prompt;
+    const prompt = result.customPrompt || "Default prompt will be used";
+    const displayText = prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt;
+    document.getElementById("storedPrompt").innerText = displayText;
   });
 }
 
 // Function to fetch and display the stored token limit
 function displayStoredTokenLimit() {
   chrome.storage.sync.get("maxTokenLimit", (result) => {
-    const tokenLimit = result.maxTokenLimit || 150;
+    const tokenLimit = result.maxTokenLimit || 500;
     document.getElementById("storedTokenLimit").innerText = tokenLimit;
   });
 }
 
-// Display the stored API key, model, prompt, and token limit when the options page loads
-displayStoredApiKey();
-displayStoredModel();
-displayStoredPrompt();
-displayStoredTokenLimit();
+function displayAllStoredValues() {
+  displayStoredApiKey();
+  displayStoredModel();
+  displayStoredPrompt();
+  displayStoredTokenLimit();
+}
+
+function showStatus(message, type) {
+  const statusElement = document.getElementById("status");
+  statusElement.innerText = message;
+  statusElement.className = `status ${type}`;
+  
+  setTimeout(() => {
+    statusElement.innerText = '';
+    statusElement.className = 'status';
+  }, 3000);
+}
